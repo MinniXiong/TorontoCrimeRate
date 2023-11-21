@@ -1,0 +1,150 @@
+---
+title: "Final Project"
+author: "Minni Xiong"
+date: "19/04/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Note: For the plot in this code, I first knit this file into a PDF, then screenshot the plots and paste it into my word file. 
+
+```{r}
+library(data.table)
+library(sp)
+library(rgdal)
+
+# Plot of spatial distribution of homicide cases and traffic collisions
+homicide <- read.csv("Homicide2019.csv", header=T)
+plot(homicide$x,homicide$y,col="red", xlab="", ylab="")
+points(43.65,-79.40,pch=8,col="blue")
+traffic <- read.csv("KSI2019.csv",header=T)
+plot(traffic$x,traffic$y,col="green",xlab="", ylab="")
+
+# Plot of Toronto and homicide cases
+homicide_tab = as.data.table(homicide)
+homicide_tab
+coordinates(homicide_tab) = c("y","x")
+crs.geo1 = CRS("+proj=longlat")
+proj4string(homicide_tab)=crs.geo1
+
+# Load in shapefile of Toronto
+Toronto = readOGR(dsn="./community-planning-boundaries-wgs84", layer = "COMMUNITY_PLANNING_BNDRY_WGS84")
+plot(Toronto)
+points(homicide_tab,pch=24,col="red")
+
+# Plot of Toronto and collision cases
+traffic_tab = as.data.table(traffic)
+traffic_tab
+coordinates(traffic_tab) = c("y","x")
+crs.geo1 = CRS("+proj=longlat")
+proj4string(homicide_tab)=crs.geo1
+plot(Toronto)
+points(traffic_tab,pch=20,col="green")
+
+# Plot of Toronto and homicide together with collision cases
+dt=data.table(43.65,-79.40)
+coordinates(dt) = c("V1","V2")
+crs.geo1 = CRS("+proj=longlat")
+proj4string(dt)=crs.geo1
+
+plot(Toronto)
+points(traffic_tab,pch=20,col="green")
+points(homicide_tab,pch=24,col="red")
+
+# Randomized permutation test
+# First we used the combined data set
+combine <- read.csv("combine1.csv",header=T)
+# Construct the observed distance to the downtown center
+obs.dist <- sum(homicide$x-43.65)^2+sum(homicide$y-(-79.40))^2
+random.dist <- rep(0,length=1000)
+for (i in 1:1000){
+  samp<- sample(1:886,size=79,replace=F)
+  random.dist[i] <- sum(combine$x[samp] - 43.65)^2 + sum(combine$y[samp]-(-79.40))^2}
+hist(random.dist,main="Distribution of randomized samples", xlab="Summary statistic")
+abline(v=obs.dist,col="red")
+
+# Plot of spatial distribution of shooting cases
+shooting <- read.csv("Shootings2019.csv", header=T)
+plot(shooting$x,shooting$y,col="orange",xlab="", ylab="")
+points(43.65,-79.40,pch=8,col="blue")
+
+# Plot of Toronto and shooting cases
+shooting_tab = as.data.table(shooting)
+shooting_tab
+coordinates(shooting_tab) = c("y","x")
+crs.geo1 = CRS("+proj=longlat")
+proj4string(homicide_tab)=crs.geo1
+plot(Toronto)
+points(shooting_tab,pch=20,col="orange")
+
+# Randomized permutation test
+# First we used the combined data set
+combine2 <- read.csv("combine2.csv",header=T)
+# Construct the observed distance to the downtown center
+obs.dist2 <- sum(shooting$x-43.65)^2+sum(shooting$y-(-79.40))^2
+random.dist2 <- rep(0,length=1000)
+for (i in 1:1000){
+  samp2<- sample(1:1300,size=493,replace=F)
+  random.dist2[i] <- sum(combine2$x[samp2] - 43.65)^2 + sum(combine2$y[samp2]-(-79.40))^2}
+hist(random.dist2,main="Distribution of randomized samples", xlab="Summary statistic")
+abline(v=obs.dist2,col="red")
+```
+
+
+```{r}
+# I tried to use a Poisson point process using intensity similar to assignment 2 question 2
+# But the estimation is so large so I didn't use this code
+
+data <- cbind(homicide$x,homicide$y)
+n <- nrow(data)
+c <- c(43.65, -79.4)
+dist <- sqrt((data[,1]-c[1])^2 + (data[,2]-c[2])^2)
+llik <- function(theta){
+  alpha <- theta[1]
+  beta <- theta[2]
+  f_int <- function(x){
+    d <- sqrt((x[1]-c[1])^2+(x[2]-c[2])^2)
+  (1+alpha*exp(-beta*d))
+    }
+int_v <- cubature::adaptIntegrate(f_int,c(0,-1),c(1,0))$integral
+-sum(log(1+alpha*exp(-beta*dist)))+n*log(int_v)
+}
+optim(c(1,1),llik)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
